@@ -472,7 +472,7 @@ body:after{
   function startLetter(){
     const io = new IntersectionObserver(es => es.forEach(e => {
       if (e.isIntersecting){ e.target.classList.add('seen'); io.unobserve(e.target); }
-    }), { threshold: .4 });
+    }), { threshold: .12, rootMargin: '0px 0px -8% 0px' });
     document.querySelectorAll('.reveal').forEach(el => io.observe(el));
     const onScroll = () => {
       const y = scrollY, max = root.scrollHeight - innerHeight;
@@ -492,9 +492,15 @@ body:after{
       [DROP_AT - 5.5, DROP_AT - 1,  'Agora abre.']
     ].filter(c => c[0] >= 3).map(c => ({ at:c[0], until:c[1], text:c[2], on:false }));
 
-    intro = { vt:0, dropped:false, done:false, dropTime:0, cues };
+    // Usa o ponto atual da faixa como referência inicial, mas não depende
+    // do currentTime durante a sequência: assim a animação continua mesmo
+    // se o áudio falhar, pausar ou reiniciar por causa do loop.
+    intro = { vt:(!bgm.paused && Number.isFinite(bgm.currentTime) ? bgm.currentTime : 0), dropped:false, done:false, dropTime:0, cues };
+    const heroImage = hero.querySelector('img');
     setAy();
-    if (hero.complete === false) $('hero').querySelector('img').addEventListener('load', setAy, { once:true });
+    if (!heroImage.complete || !heroImage.naturalWidth) {
+      heroImage.addEventListener('load', setAy, { once:true });
+    }
 
     if (reduce){                           // sem animação: mostra tudo
       hero.classList.add('formed'); intro.dropped = intro.done = true; startLetter(); return;
@@ -523,8 +529,9 @@ body:after{
 
   function introTick(dt){
     const I = intro; if (!I) return;
-    // tempo virtual: segue o áudio; se ele parar (mudo/erro), segue o relógio
-    if (!bgm.paused && bgm.currentTime > .05) I.vt = bgm.currentTime; else I.vt += dt;
+    // Relógio monotônico: o áudio marca o ponto inicial, mas não controla
+    // a animação. Isso evita travamentos quando a faixa pausa ou entra em loop.
+    I.vt += dt;
 
     if (!I.dropped){
       const span = Math.max(DROP_AT - 4, 1);
