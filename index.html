@@ -227,6 +227,36 @@ body:after{
   #s404.crt{animation-duration:.01s}
 }
 </style>
+
+<script>
+/* Atualização de cache a cada abertura da página. */
+(() => {
+  const url = new URL(location.href);
+  if (!url.searchParams.has("_zoth_cache")) {
+    url.searchParams.set("_zoth_cache", Date.now().toString());
+    location.replace(url.href);
+    return;
+  }
+
+  const refreshLocalAssets = () => {
+    const version = Date.now().toString();
+    document.querySelectorAll("img[src], audio[src], source[src], video[src]").forEach(el => {
+      const raw = el.getAttribute("src");
+      if (!raw || /^(data:|https?:\/\/)/i.test(raw)) return;
+      const asset = new URL(raw, location.href);
+      asset.searchParams.set("_zoth_cache", version);
+      el.setAttribute("src", asset.href);
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", refreshLocalAssets, { once: true });
+  } else {
+    refreshLocalAssets();
+  }
+})();
+</script>
+
 </head>
 <body>
 
